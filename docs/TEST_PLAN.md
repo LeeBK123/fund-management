@@ -5,7 +5,7 @@
 2. Click "Growth Capital Fund" → fund detail shows seeded monthly entries sorted by period desc.
 3. Click "New entry" → form opens.
 4. Enter: period 2024-12-01, opening 10,350,000, closing 10,800,000, inflow 200,000, outflow 100,000, key_contributors "Year-end rebalancing; gains in energy sector", notes "Final month".
-5. Submit → row appears in fund detail table; net_return = 350,000, return_pct ≈ 3.30%.
+5. Submit → row appears in fund detail table; net_return = 350,000, return_pct = 3.3175% (displayed as 3.32%).
 6. Go to Dashboard → GCF card shows Dec 2024 values + key-contributors snippet.
 7. Verify top-fund highlight updates if GCF is now ranked highest.
 

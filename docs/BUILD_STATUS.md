@@ -1,31 +1,40 @@
 # Build status — 2 October 2026
 
-## Implemented and pushed
+## Working v1
 
-- Sprint 1: database access layer, fund CRUD, monthly-entry CRUD, server-derived returns, shared navigation, and the working homepage.
-- Sprint 2: duplicate/validation errors, calculation regression tests, and an additive database integrity and audit migration.
-- Sprint 3: consolidated dashboard with latest values, contributors, latest/all-time outflows, selectable-year YTD returns, ranking, and rule-based flags.
-- Sprint 4: responsive layout, loading/error/retry states, ledger filters, CSV export, preserved form values after errors, accessible delete dialogs, activity history, and a real-database end-to-end runner.
+The app is running against the existing **fund-management** Supabase project (`ibrhmmvulotqybogbaph`). Its original five funds and ten monthly entries were verified and preserved. No replacement database or invented credentials were used.
 
-The schema at `0001_init.sql` was preserved. `0002_integrity_and_audit.sql` corrects derived seed values, enforces first-of-month/non-negative cash constraints, recalculates metrics at the database level, expands return precision, and records changes through protected audit triggers. Activity appears when this migration is applied; CRUD still uses the original tables.
+Sprints 1–4 are implemented: fund and monthly-entry CRUD, server-derived returns, duplicate rejection, fund history, the consolidated dashboard, selectable-year YTD returns, rankings, performance flags, manual contributors, ledger filters, CSV export, responsive navigation, loading/error/retry states, and confirmed deletion dialogs.
 
-## Verified locally
+## Database applied and verified
 
-- Production build with TypeScript and ESLint checks enabled: passed.
-- Standalone ESLint and TypeScript checks: passed.
-- Six regression tests: passed (documented calculations, cash flows, zero bases, stale derived values, ranking/YTD/empty-fund handling, flags, and CSV escaping/formula safety).
-- The test-plan example calculates to **350,000 / 10,550,000 × 100 = 3.3175%**, displayed as 3.32%. The test plan's 3.30% approximation is not used.
+- Original `0001_init.sql` schema was already applied; it was not rerun or edited.
+- `0002_integrity_and_audit.sql` was reviewed and applied on the remote database as migration `20261002062133_integrity_and_audit`. It corrected nine inconsistent seed metrics, expanded return precision, added cash/month checks and metric triggers, and installed protected audit logging. The audit trigger function is in a private schema; public application roles cannot write or truncate the audit table or truncate core tables.
+- `20261002062443_consolidate_demo_policies.sql` was generated with the Supabase CLI and applied remotely as `20261002062513_consolidate_demo_policies`. It removed redundant SELECT policies and explicitly scoped shared demo access to anonymous/authenticated API roles.
+- Security advisor: no findings. Performance warnings about duplicate permissive policies were resolved. The newly added activity index has an informational unused-index notice; it is retained for the latest-activity query as history grows. [Advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index).
+- The initial schema was provisioned outside migration history. Remote applied versions above are documented alongside the original repository filenames; reconcile this historical baseline before adopting automated CLI migration deployment.
 
-## Pending external access — v1 acceptance is NOT complete
+## Acceptance checks passed
 
-Vercel CLI reports no saved credentials. Device sign-in was started, but no credentials became available. Browser security review denied opening both Vercel sign-in and the local application because permission was declined. No environment secrets were invented or committed. Browser verification is also pending permission to access the application.
+The production server and `scripts/e2e.mjs` used the real provisioned database and anonymous application permissions, without service-role credentials:
 
-Therefore these checks remain pending:
+- Actual form submission creates a fund and edits its name, persisting on refresh.
+- Actual form submission creates a monthly entry and writes 350,000 net return and 3.3175% return for the test-plan values.
+- Fund detail and director overview show the persisted values and contributor note.
+- A second fund/month submission returns a friendly error without creating a duplicate.
+- Editing closing value recalculates and persists the return.
+- CSV contains the recorded entry.
+- A zero opening/inflow base saves without division failure.
+- Removing this run’s disposable entries produces the empty state; its temporary fund is cleaned up.
+- The PRD’s named Growth Capital Fund November 2024 entry was saved through its actual form with its existing raw values, preserving seeded data. Its dashboard card showed closing value, net return, total outflow and contributors alongside the other four funds.
+- Every actual save adds an audit event, and anonymous audit-table writes are denied.
 
-1. Link the existing Vercel project and run `vercel env pull .env.local`.
-2. Verify the provisioned tables and funds; apply `0001` only if the initial schema is absent, and apply the new `0002` migration through an authorized database connection.
-3. Run `pnpm test:e2e` against the running app and real provisioned database. It submits actual server-rendered forms, verifies persistence and recalculation, rejects a duplicate, checks dashboard and CSV updates, checks a zero base and an empty state, and cleans up its own disposable fund.
-4. Complete browser checks of the real data flow, deletion confirmation, and mobile navigation.
-5. Verify Vercel deployment. Git pushes succeeded, but the public GitHub API returned no deployment/check status to confirm a live release.
+The test script removes only its own disposable fixtures. The original five funds and ten entries remain.
 
-No live database persistence, migration application, deployed URL, or successful live release is claimed. Auth/lock-down and AI remain later phases according to the PRD; this is the open demo workspace intended by v1.
+Production build, standalone ESLint, TypeScript and all six core regression tests passed. The test-plan example is **350,000 / 10,550,000 × 100 = 3.3175%**, displayed as 3.32%; the documentation approximation was corrected.
+
+## Remaining release verification
+
+The existing public Supabase URL/key were retrieved through the connected Supabase account and saved in ignored `.env.local`. Vercel CLI still has no saved credentials, so `vercel env pull .env.local` and the online deployment cannot yet be verified. Code is deployed only by Git pushes, as required; no Vercel CLI deployment was performed.
+
+Browser access was previously declined. Automated real-form and database acceptance passed; visual/mobile navigation and confirmation-dialog browser checks remain pending renewed browser authorization. Auth/lock-down and AI remain later phases, per the PRD.

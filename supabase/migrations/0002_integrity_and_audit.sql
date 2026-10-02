@@ -32,11 +32,18 @@ create table public.audit_log (
   created_at timestamptz not null default now()
 );
 alter table public.audit_log enable row level security;
-create policy audit_v1_read on public.audit_log for select using (true);
+create policy audit_v1_read on public.audit_log for select to anon, authenticated using (true);
+revoke all on public.audit_log from anon, authenticated;
 grant select on public.audit_log to anon, authenticated;
-revoke insert, update, delete on public.audit_log from anon, authenticated;
-create or replace function public.log_fund_change() returns trigger
-language plpgsql security definer set search_path = public as $$
+create index audit_log_created_at_idx on public.audit_log(created_at desc);
+-- Application roles require CRUD only, not TRUNCATE or trigger management.
+revoke truncate, references, trigger on public.funds, public.monthly_entries from anon, authenticated;
+create schema if not exists private;
+revoke all on schema private from public, anon, authenticated;
+-- Called only by triggers after source-table RLS has authorized a write.
+-- The v1 anonymous demo intentionally records a null actor_user_id.
+create or replace function private.log_fund_change() returns trigger
+language plpgsql security definer set search_path = '' as $$
 begin
   insert into public.audit_log(action,actor_user_id,target_table,target_id,detail)
   values(lower(tg_op),auth.uid(),tg_table_name,coalesce(new.id,old.id),
@@ -45,9 +52,9 @@ begin
   return coalesce(new,old);
 end;
 $$;
-revoke all on function public.log_fund_change() from public;
+revoke all on function private.log_fund_change() from public, anon, authenticated;
 create trigger audit_funds after insert or update or delete on public.funds
-for each row execute function public.log_fund_change();
+for each row execute function private.log_fund_change();
 create trigger audit_entries after insert or update or delete on public.monthly_entries
-for each row execute function public.log_fund_change();
+for each row execute function private.log_fund_change();
 commit;
