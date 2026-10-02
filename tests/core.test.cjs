@@ -1,0 +1,20 @@
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const { execFileSync } = require('node:child_process');
+const path = require('node:path');
+execFileSync(process.execPath,[path.join(__dirname,'../node_modules/typescript/bin/tsc'),'lib/data/metrics.ts','lib/data/overview.ts','lib/csv.ts','--outDir','.test-build','--module','commonjs','--target','ES2022','--skipLibCheck'],{cwd:path.join(__dirname,'..')});
+const { metrics, deriveEntry, flags } = require('../.test-build/data/metrics.js');
+const { overview } = require('../.test-build/data/overview.js');
+const { entriesCsv } = require('../.test-build/csv.js');
+const fund = { id:'gcf',name:'Growth Capital Fund',code:'GCF',description:'' };
+const row = (extra={}) => deriveEntry({ id:'entry',fund_id:'gcf',period:'2024-12-01',opening_value:10350000,closing_value:10800000,inflow:200000,outflow:100000,net_return:999,return_pct:999,key_contributors:'Year-end rebalancing; gains in energy sector',notes:'Final month',...extra });
+test('documented staff scenario gives 350,000 net and 3.3175 percent, correcting the test-plan approximation',()=>{ const e = row(); assert.equal(e.net_return,350000); assert.equal(e.return_pct,3.3175); });
+test('returns exclude cash flows and handle zero bases and cents',()=>{ assert.deepEqual(metrics({opening_value:100,closing_value:170,inflow:80,outflow:10}),{net_return:0,return_pct:0}); assert.equal(metrics({opening_value:0,closing_value:100,inflow:0,outflow:0}).return_pct,0); assert.equal(metrics({opening_value:.1,closing_value:.3,inflow:.2,outflow:0}).net_return,0); });
+test('stale persisted derived values are recalculated on read and edit',()=>{ assert.equal(row({closing_value:10900000}).net_return,450000); assert.equal(row({closing_value:10900000}).return_pct,4.2654); });
+test('dashboard ranks latest months, sums selected year, and retains empty funds',()=>{
+  const funds = [fund,{...fund,id:'isf',name:'Income',code:'ISF'},{...fund,id:'empty',name:'Empty',code:'EMPTY'}];
+  const entries = [row(),row({id:'older',period:'2024-11-01',closing_value:10700000}),row({id:'prior',period:'2023-12-01'}),row({fund_id:'isf',opening_value:100,closing_value:110,inflow:0,outflow:0})];
+  const report = overview(funds,entries,2024); assert.equal(report.cards[0].fund.id,'isf'); assert.equal(report.cards[1].latest.period,'2024-12-01'); assert.equal(report.cards[1].ytd,600000); assert.equal(report.ytd,600010); assert.equal(report.outflow,300000); assert.equal(report.cards[2].latest,undefined);
+});
+test('flags have documented strict thresholds',()=>{ assert.deepEqual(flags(row({opening_value:100,closing_value:110,inflow:0,outflow:30,key_contributors:''})),['Outstanding','High outflow','Missing drivers']); assert.deepEqual(flags(row({opening_value:100,closing_value:95,inflow:0,outflow:0})),['Underperforming']); });
+test('CSV quotes line breaks and commas and neutralizes spreadsheet formulas',()=>{ const csv = entriesCsv([row({key_contributors:'=HYPERLINK("x")',notes:'a,b\n"c"'})],[fund]); assert.ok(csv.startsWith('\uFEFF')); assert.ok(csv.includes('"\'=HYPERLINK(""x"")"')); assert.ok(csv.includes('"a,b\n""c"""')); assert.ok(csv.includes('"350000","3.3175"')); });
