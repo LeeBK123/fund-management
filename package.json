@@ -1,5 +1,5 @@
 {
-  "name": "vibe-stack-supabase",
+  "name": "fund-management",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/core.test.cjs"
+    "test": "node --test tests/core.test.cjs",
+    "test:e2e": "node scripts/e2e.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.0",

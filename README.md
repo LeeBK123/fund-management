@@ -1,41 +1,49 @@
-# vibe-stack-supabase
+# Fund Management
 
-Next.js 15 + Supabase starter for shipping vibe-coded apps fast. Clone, provision, build.
+A shared demo workspace for staff to log monthly fund performance and for a finance director to review consolidated results. The homepage is the app; no login is required in v1.
 
-## Stack
+## Core workflow
 
-| Layer | Choice |
-|---|---|
-| Framework | Next.js 15 (App Router, React 19, Server Actions) |
-| Language | TypeScript strict |
-| Styles | Tailwind CSS v4 (CSS-first, no config file) |
-| Auth + DB | Supabase (`@supabase/ssr`) |
-| Package manager | Bun |
-| Deploy | Vercel |
+Open a fund, select **New entry**, record a month’s opening/closing values, inflow/outflow, contributors and notes, then save. The entry persists in Supabase, returns recalculate on the server, and the fund detail and overview refresh. Existing entries and fund details can be edited or deleted through confirmation dialogs.
 
-## Quick start
+The overview ranks each fund’s latest month and shows contributors, closing value, net return, latest outflow, all-time outflow and selected-year YTD return. Each latest month is labelled; a mixed-month portfolio snapshot is explicit. CSV exports all recorded entries and neutralizes spreadsheet formulas in text fields. All Entries supports fund/year filters and shows audit activity once the audit migration is applied.
 
-```bash
-bun install
-cp .env.example .env.local   # fill in your Supabase keys
-bun dev
+## Local setup
+
+Use Node.js 22 or newer and the pinned pnpm package manager.
+
+```sh
+pnpm install
+vercel login
+vercel link --project fund-management
+vercel env pull .env.local
+pnpm dev
 ```
 
-Open http://localhost:3000. Edit `app/page.tsx` to start building.
+Use the existing provisioned Supabase project. Environment files and `.vercel` are ignored by Git. The public anonymous key is used by the server data layer under the demo RLS policies; service-role credentials are never used in the client or for application writes.
 
-## Provisioning a new project
+## Database
 
-Use the `/new-vibe-project <name>` skill (see `claude-dotfiles` repo) which:
-1. Clones this template and renames it
-2. Creates a new GitHub repo and pushes
-3. Creates a Supabase project and injects URL + anon key
-4. Creates a Vercel project linked to the GitHub repo
-5. Triggers first deploy and returns the preview URL
+`supabase/migrations/0001_init.sql` contains the original tables and demo seeds. Verify whether it is already applied before running it. Do not recreate existing tables or edit this migration.
 
-## Working with AI
+Apply `0002_integrity_and_audit.sql` through an authorized Supabase/Postgres administration connection. It is transactional and preserves the original raw values and contributors. It corrects stale derived seed figures, adds metric triggers and validation, expands return precision and records CRUD activity. The application also calculates metrics on read and write, so the original schema can serve the core workflow while this additive migration is pending.
 
-See [CLAUDE.md](CLAUDE.md) for conventions. This repo is pre-wired for gstack — start with `/office-hours`.
+Net return = closing − opening − inflow + outflow. Return % = net return / (opening + inflow) × 100, or zero when the base is zero. Cash inputs accept non-negative values with two decimal places and a maximum of 1 trillion per field.
 
-## Switching to Neon
+## Checks
 
-If you need Postgres without Supabase (e.g. prefer Drizzle ORM + Clerk for auth), a `vibe-stack-neon` variant is planned. For now: fork this and swap `@supabase/ssr` for `drizzle-orm` + `@neondatabase/serverless`, add Clerk or NextAuth.
+```sh
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm start
+# In another terminal, using the real provisioned environment:
+pnpm test:e2e
+```
+
+The end-to-end check defaults to http://localhost:3000. Set `E2E_BASE_URL` to an authorized deployed application URL when testing a deployment that uses the same Supabase environment. It creates a uniquely coded disposable fund, submits real forms, checks persistence, dashboard updates, duplicate prevention, edits, exports and zero-base handling, then removes only its own fixture.
+
+Deploy by committing and pushing to `main`; Vercel should build from GitHub. Do not deploy local files with the Vercel CLI.
+
+See [docs/BUILD_STATUS.md](docs/BUILD_STATUS.md) for verified checks and outstanding acceptance work, and the rest of `/docs` for the PRD, model and later auth/AI phases. Keep real/private financial data out of the public demo until the lock-down sprint.

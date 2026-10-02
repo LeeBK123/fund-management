@@ -3,6 +3,7 @@ import { db, databaseError } from './db';
 import { deriveEntry, metrics, type Entry, type EntryInput } from './metrics';
 const columns = 'id,fund_id,period,opening_value,closing_value,inflow,outflow,net_return,return_pct,key_contributors,notes';
 export async function listEntries(fundId?: string): Promise<Entry[]> {
+  if (fundId && !/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(fundId)) return [];
   const rows: Entry[] = [];
   // Page through PostgREST's row limit so totals and exports never truncate.
   for (let offset = 0; ; offset += 1000) {
@@ -14,6 +15,7 @@ export async function listEntries(fundId?: string): Promise<Entry[]> {
   }
 }
 export async function getEntry(id: string): Promise<Entry | null> {
+  if (!/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)) return null;
   const { data, error } = await db().from('monthly_entries').select(columns).eq('id', id).maybeSingle();
   if (error) databaseError(error); return data ? deriveEntry(data as Entry) : null;
 }

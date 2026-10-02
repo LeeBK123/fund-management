@@ -8,5 +8,6 @@ export function db() {
 export function databaseError(error: { code?: string; message: string }): never {
   if (error.code === '23505') throw new Error('That fund code or fund/month already exists. Please edit the existing record.');
   if (error.code === '23503') throw new Error('This fund no longer exists. Refresh and choose another fund.');
+  if (error.code === '22003') throw new Error('These amounts produce a return outside the database’s supported range. Check the opening value and cash flows.');
   throw new Error('The database could not complete this request. Please try again.');
 }

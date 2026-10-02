@@ -6,6 +6,7 @@ export async function listFunds(): Promise<Fund[]> {
   if (error) databaseError(error); return data ?? [];
 }
 export async function getFund(id: string): Promise<Fund | null> {
+  if (!/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)) return null;
   const { data, error } = await db().from('funds').select('id,name,code,description').eq('id', id).maybeSingle();
   if (error) databaseError(error); return data;
 }
