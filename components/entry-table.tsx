@@ -1,0 +1,8 @@
+import Link from 'next/link';
+import { DeleteButton } from './forms';
+import { money,month,pct } from '@/lib/format';
+import type { Entry,Fund } from '@/lib/data/metrics';
+export function EntryTable({ entries,funds }: { entries: Entry[]; funds?: Fund[] }) {
+  if (!entries.length) return <div className="empty"><span className="empty-icon">≡</span><h2>No entries yet</h2><p>Add a monthly entry to start tracking performance.</p></div>;
+  return <div className="table-wrap"><table><thead><tr>{funds && <th>Fund</th>}<th>Month</th><th>Opening</th><th>Closing</th><th>Inflow</th><th>Outflow</th><th>Net return</th><th>Return</th><th>Key contributors / notes</th><th>Actions</th></tr></thead><tbody>{entries.map(e => <tr key={e.id}>{funds && <td><Link href={`/funds/${e.fund_id}`}>{funds.find(f => f.id === e.fund_id)?.code ?? 'Fund'}</Link></td>}<td className="nowrap">{month(e.period)}</td><td className="numeric">{money(e.opening_value)}</td><td className="numeric">{money(e.closing_value)}</td><td className="numeric">{money(e.inflow)}</td><td className="numeric">{money(e.outflow)}</td><td className={`numeric ${e.net_return < 0 ? 'negative' : 'positive'}`}>{money(e.net_return)}</td><td className={e.return_pct < 0 ? 'negative' : 'positive'}>{pct(e.return_pct)}</td><td className="drivers-cell"><span>{e.key_contributors || 'No contributors recorded'}</span>{e.notes && <p className="muted">{e.notes}</p>}</td><td><div className="row-actions"><Link className="button secondary small" href={`/entries/${e.id}/edit`}>Edit</Link><DeleteButton id={e.id} kind="entry" fundId={e.fund_id} /></div></td></tr>)}</tbody></table></div>;
+}

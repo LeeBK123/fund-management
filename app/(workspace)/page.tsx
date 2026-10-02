@@ -1,0 +1,8 @@
+import Link from 'next/link';
+import { listFunds } from '@/lib/data/funds';
+import { listEntries } from '@/lib/data/entries';
+import { money,month,pct } from '@/lib/format';
+export default async function Dashboard() {
+  const [funds,entries] = await Promise.all([listFunds(),listEntries()]);
+  return <><div className="page-header"><div><p className="eyebrow">PORTFOLIO OVERVIEW</p><h1>Fund performance</h1><p className="subtitle">A clear view of your funds, month by month.</p></div><Link className="button" href="/entries/new">＋ New entry</Link></div><div className="section-heading"><h2>Your funds</h2><span className="muted">{funds.length} funds</span></div><div className="fund-grid">{funds.map(f => { const e = entries.find(row => row.fund_id === f.id); return <article className="fund-card" key={f.id}><div className="card-top"><span className="fund-code">{f.code}</span><span className="muted">{e ? month(e.period) : 'No entries'}</span></div><h2><Link href={`/funds/${f.id}`}>{f.name}</Link></h2><p className="muted">{f.description}</p>{e && <><span className="value-label">CLOSING VALUE</span><div className="value">{money(e.closing_value)}</div><p className={e.net_return < 0 ? 'negative' : 'positive'}>{money(e.net_return)} · {pct(e.return_pct)}</p><p className="drivers">{e.key_contributors || 'No contributors recorded'}</p></>}<Link href={`/funds/${f.id}`} className="text-link">View fund →</Link></article>; })}</div>{!funds.length && <div className="empty"><h2>Create your first fund</h2><p>Add a fund, then log its monthly performance.</p><Link href="/funds/new" className="button">Add fund</Link></div>}</>;
+}

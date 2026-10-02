@@ -1,0 +1,1 @@
+export default function Loading() { return <div aria-label="Loading portfolio" role="status"><div className="skeleton skeleton-title" /><div className="stats">{[1,2,3].map(i => <div key={i} className="skeleton skeleton-card" />)}</div><div className="panel">{[1,2,3,4,5].map(i => <div key={i} className="skeleton skeleton-row" />)}</div></div>; }
